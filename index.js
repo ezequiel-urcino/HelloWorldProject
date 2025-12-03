@@ -1,29 +1,35 @@
 const express = require("express");
+const path = require("path");
+
 const app = express();
-const PORT = process.env.PORT || 8080;
-const path=require('path')
 
-var myvalue="dog";
+// For parsing JSON from Android
+app.use(express.json());
 
-app.use(express.static(path.join(__dirname, 'public')))
-app.use(express.json())
-app.use(express.urlencoded({extended:true}))
-app.set('views', path.join(__dirname, 'views'))
-app.set('view engine', 'ejs')
-app.engine('html', require('ejs').renderFile);
+// To serve files in /views as static HTML
+app.use(express.static("views"));
 
-app.get("/", (req, res) => {
-    res.send("Hello World!");
+// GET route for test.html
+app.get("/test.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "views", "test.html"));
 });
 
-app.get("/one", (req, res) => {res.render('./one.html')})
-app.post("/two", function(req, res){ 
-	var animal=req.param("myvalue");
-	console.log(animal)
-	res.render("two.html", {animal:animal});
+// POST: handle Madlibs data
+app.post("/madlibs", (req, res) => {
+    const { w1, w2, w3, w4, w5 } = req.body;
+
+    const story = `
+        One day, a ${w3} ${w1} decided to ${w2} 
+        all the way to ${w4} with ${w5}.
+        It was the greatest adventure ever told!
+    `;
+
+    res.send(story);
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+// IBM Cloud will set PORT automatically
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+    console.log("Madlibs server running on port", port);
 });
 
