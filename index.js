@@ -1,64 +1,51 @@
-const express = require("express");
-const path = require("path");
+// index.js
+const express = require('express');
+const path = require('path');
+const bodyParser = require('body-parser');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-// ------------------------------
-// CORS FIX (works with Android/Volley)
-// ------------------------------
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization, X-Requested-With"
-    );
-    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+// Parse JSON bodies
+app.use(bodyParser.json());
 
-    // Reply immediately to OPTIONS requests (important)
-    if (req.method === "OPTIONS") {
-        return res.sendStatus(200);
-    }
+// Serve static assets (css, js, images) from /views/public (adjust if needed)
+app.use('/static', express.static(path.join(__dirname, 'views', 'public')));
 
-    next();
+// Route: GET /test -> static test page (used by Android GET button)
+app.get('/test', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'test.html'));
 });
 
-// ------------------------------
-// Parse JSON body
-// ------------------------------
-app.use(express.json());
-
-// ------------------------------
-// Serve static files (HTML + JS)
-// ------------------------------
-app.use(express.static(path.join(__dirname, "views")));
-
-// ------------------------------
-// GET /test.html
-// ------------------------------
-app.get("/test.html", (req, res) => {
-    res.sendFile(path.join(__dirname, "views", "test.html"));
+// Route: GET /madlib -> the interactive page (for manual browser testing)
+app.get('/madlib', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'madlib.html'));
 });
 
-// ------------------------------
-// POST /madlibs -> returns a story
-// ------------------------------
-app.post("/madlibs", (req, res) => {
-    const { w1, w2, w3, w4, w5 } = req.body;
+// Route: POST /play -> expects JSON with words, returns completed story JSON
+app.post('/play', (req, res) => {
+  try {
+    const { noun = '', verb = '', adjective = '', place = '', animal = '' } = req.body;
 
-    const story = `
-        One day, a ${w3} ${w1} decided to ${w2}
-        all the way to ${w4} with ${w5}.
-        It was the greatest adventure ever told!
-    `;
+    // Sanitize/validate minimally
+    const safe = s => String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    res.send(story.trim());
+    const story = `On Thanksgiving, my ${safe(adjective)} ${safe(noun)} decided to ${safe(verb)} at the ${safe(place)}. Everyone laughed, especially when a ${safe(animal)} showed up. It was a memorable day!`;
+
+    // Return JSON
+    return res.json({ ok: true, story });
+  } catch (err) {
+    console.error('POST /play error', err);
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
 });
 
-// ------------------------------
-// Start Server
-// ------------------------------
-const port = process.env.PORT || 8080;
-app.listen(port, () => {
-    console.log("Server running on port " + port);
+// optional root redirect
+app.get('/', (req, res) => {
+  res.redirect('/madlib');
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
